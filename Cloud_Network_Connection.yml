@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: A simple EC2 Template
+
+
+Resources:
+
+##VirtualPrivateCloud
+  VPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: 10.0.0.0/16
+        Tags:
+          - Key: "Name"
+            Value: "Test_VPC"
+
+##InternetGateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+
+##VPCGateWayAttachment
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+##Subnet_Public_1
+  PublicSubnetA: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: eu-north-1a
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+
+##Subnet_Public_2
+  PublicSubnetB: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: eu-north-1b
+      CidrBlock: 10.1.0.0/24
+      MapPublicIpOnLaunch: true
+
+##RoutetablePublic
+  RouteTablePublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+##InternetRoute
+  InternetRoute: 
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref RouteTablePublic
+
+##PublicSubnetARouteTableAssociation
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePublic
+      SubnetId: !Ref PublicSubnetA
+
+##PublicSubnetBRouteTableAssociation
+  PublicSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePublic
+      SubnetId: !Ref PublicSubnetB
+
+##Subnet_Private_1
+  PrivateSubnetA: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: eu-north-1a
+      CidrBlock: 10.2.0.0/24
+      MapPublicIpOnLaunch: false
+
+##Subnet_Private_2
+  PrivateSubnetB: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: eu-north-1b
+      CidrBlock: 10.3.0.0/24
+      MapPublicIpOnLaunch: false
+
+##RoutetablePrivate
+  RouteTablePrivate:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+##LocalRoute
+  LocalRoute: 
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 172.31.0.0/16
+      RouteTableId: !Ref RouteTablePrivate
+
+##PrivateSubnetARouteTableAssociation
+  PrivateSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate
+      SubnetId: !Ref PrivateSubnetA
+
+##PrivateSubnetBRouteTableAssociation
+  PrivateSubnetDRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate
+      SubnetId: !Ref PrivateSubnetB
+
+
+##NetworkAccessControlLists(NACLs)
+  NACLs:
+    Type: AWS::EC2::NetworkAcl
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: Security_for_Test_VPC
+      VpcId: !Ref VPC
+
+##NATgatewayPublicSubnetA
+  NATgatewaPublicSubnetA:
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      SubnetId: !Ref PublicSubnetA
+      Tags: 
+        - Key: Name
+          Value: PublicSubnetA
+
+##NATgatewayPublicSubnetB
+  NATgatewaPublicSubnetB:
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      SubnetId: !Ref PublicSubnetB
+      Tags: 
+        - Key: Name
+          Value: PublicSubnetB
