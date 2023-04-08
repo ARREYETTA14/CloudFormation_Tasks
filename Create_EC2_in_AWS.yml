@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: A simple EC2 Template
+
+Parameters:
+##Keypair
+  KeyPairName:
+    Description: Name of an existing key pair to allow for SSH into the instance
+    Type: "AWS::EC2::KeyPair::KeyName"
+
+##InstanceType:
+  InstanceTypeSelection: 
+    Description: Select the required instance type for the instance
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.medium
+      - m1.small
+
+##VolumeSize
+  VolumeSizeValue:
+    Description: Input the value for the desired volumesize
+    Type: Number
+    Default: "8"
+    MinValue: "8"
+    MaxValue: "20"
+
+##AvaliabilityZone
+  AvailabilityZones:
+    Description: Select the required Availability Zone
+    Type: AWS::EC2::AvailabilityZone::Name
+    AllowedValues:
+      - eu-north-1a
+      - eu-north-1b
+
+##ImageID
+  AmazonMachineImageId:
+    Description: The EC2 machine ID
+    Type: String
+    Default: ami-0022f774911c1d690
+
+##SecurityGroups
+  SecurityGroupPortA:
+    Description: Select Desired Security Group Ports for your Instance
+    Type: Number
+    AllowedValues:
+      - 22
+      - 80
+      - 443
+
+##SecurityGroups
+  SecurityGroupPortB:
+    Description: Select Desired Security Group Ports for your Instance
+    Type: Number
+    AllowedValues:
+      - 22
+      - 80
+      - 443
+
+
+##CIDRBlocks
+  MySourceIpA:
+    Description: Ip address to access the Instance
+    Type: String
+    MinLength: "9"
+    MaxLength: "18"
+    Default: 102.244.157.244/32
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+
+
+##CIDRBlocks
+  MySourceIpB:
+    Description: Ip address to access the Instance
+    Type: String
+    MinLength: "9"
+    MaxLength: "18"
+    Default: 0.0.0.0/0
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+
+   
+
+Resources:
+
+##VirtualPrivateCloud
+  VPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: 10.0.0.0/16
+        Tags:
+          - Key: "Name"
+            Value: "CloudFormationVPC"
+
+
+##InternetGateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+
+##VPCGateWayAttachment
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+
+##Subnet        
+  SubnetA: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Ref AvailabilityZones
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+
+
+##Routetable
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+
+
+##InternetRoute
+  InternetRoute: 
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref RouteTable
+
+
+##SubnetARouteTableAssociation
+  SubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref SubnetA
+
+
+##InstanceSecurityGroup
+  InstanceSecurityGroups:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH via port 22 and from anywhere via port 8080
+      GroupName: MyFirstEC2_SG
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+          - CidrIp: !Ref MySourceIpA
+            FromPort: !Ref SecurityGroupPortA
+            IpProtocol: TCP 
+            ToPort: !Ref SecurityGroupPortA
+
+          - CidrIp: !Ref MySourceIpB
+            FromPort: !Ref SecurityGroupPortB
+            IpProtocol: TCP 
+            ToPort: !Ref SecurityGroupPortB
+
+
+##InstanceOne
+  MyFirstEC2:
+    Type: AWS::EC2::Instance
+    Properties:
+        ImageId: !Ref AmazonMachineImageId
+        InstanceType: !Ref InstanceTypeSelection
+        KeyName: !Ref KeyPairName
+        Tags:
+          - Key: Name
+            Value: Webserver
+          - Key: Production
+            Value: Webserver  
+        SubnetId: !Ref SubnetA  
+        BlockDeviceMappings:
+          -
+            DeviceName: /dev/sdh
+            Ebs: 
+              DeleteOnTermination: True
+              VolumeSize: !Ref VolumeSizeValue
+              VolumeType: gp2
+        SecurityGroupIds:
+          - !Ref InstanceSecurityGroups
+
+
+##ElasticIp
+  MyFirstEC2EIp:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Domain: VPC
+      InstanceId: !Ref MyFirstEC2
+      Tags:
+        - Key: Name
+          Value: Myfirstec2EIp
