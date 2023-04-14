@@ -8,7 +8,7 @@ Parameter:
 ##AmazonMachineIDforWebservers:
   AMIIDforWebservers:
     Type: String
-    Default: ami-0022f774911c1d690
+    Default: ami-0f960c8194f5d8df5
     Description: Input the AMIID
 
 ##InstanceTypeforWebservers:
@@ -196,7 +196,8 @@ Parameter:
 Metadata:
   AWS::Cloudformarion::Interface:
     ParameterGroup:
-      - Label:
+      - 
+        Label:
           Default: "Parameters for Webservers"
         Parameters:
         - AMIIDforWebservers
@@ -209,7 +210,8 @@ Metadata:
         - MySourceIpA
         - SecurityGroupPortsWebservers
         - MySourceIpB
-      - Label:
+      - 
+        Label:
           Default: "Parameters for Appservers"
         Parameters:
         - AMIIDforAppservers
@@ -414,12 +416,12 @@ Resources:
     Properties:
       ImageId: !Ref AMIIDforWebservers
       InstanceType: !Ref InstanceTypeParameterForWebservers
-        KeyName: !Ref KeypairforWebservers
-        Tags:
-          - Key: Name
-            Value: Webserver1
-          - Key: Production
-            Value: Webserver1  
+      KeyName: !Ref KeypairforWebservers
+      Tags:
+        - Key: Name
+          Value: Webserver1
+        - Key: Production
+          Value: Webserver1  
       SubnetId: !Ref PublicSubnetA
       BlockDeviceMappings:
           -
@@ -438,12 +440,12 @@ Resources:
     Properties:
       ImageId: !Ref AMIIDforWebservers
       InstanceType: !Ref InstanceTypeParameterForWebservers
-        KeyName: !Ref KeypairforWebservers
-        Tags:
-          - Key: Name
-            Value: Webserver1
-          - Key: Production
-            Value: Webserver1  
+      KeyName: !Ref KeypairforWebservers
+      Tags:
+        - Key: Name
+          Value: Webserver1
+        - Key: Production
+          Value: Webserver1  
       SubnetId: !Ref PublicSubnetB
       BlockDeviceMappings:
           -
@@ -461,12 +463,12 @@ Resources:
     Properties:
       ImageId: !Ref AMIIDforAppservers
       InstanceType: !Ref InstanceTypeParameterForAppservers
-        KeyName: !Ref KeypairforAppservers
-        Tags:
-          - Key: Name
-            Value: Appserver1
-          - Key: Production
-            Value: Appserver1  
+      KeyName: !Ref KeypairforAppservers
+      Tags:
+        - Key: Name
+          Value: Appserver1
+        - Key: Production
+          Value: Appserver1  
       SubnetId: !Ref PrivateSubnetA
       BlockDeviceMappings:
           -
@@ -484,12 +486,12 @@ Resources:
     Properties:
       ImageId: !Ref AMIIDforAppservers
       InstanceType: !Ref InstanceTypeParameterForAppservers
-        KeyName: !Ref KeypairforAppservers
-        Tags:
-          - Key: Name
-            Value: Appserver2
-          - Key: Production
-            Value: Appserver2  
+      KeyName: !Ref KeypairforAppservers
+      Tags:
+        - Key: Name
+          Value: Appserver2
+        - Key: Production
+          Value: Appserver2  
       SubnetId: !Ref PrivateSubnetB
       BlockDeviceMappings:
           -
