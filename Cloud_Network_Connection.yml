@@ -143,3 +143,21 @@ Resources:
       Tags: 
         - Key: Name
           Value: PublicSubnetB
+
+
+##SecurityGroup
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: Security Group for the Network
+      GroupName: SSH and HTTP Security Group
+      SecurityGroupIngress: 
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: 41.202.207.156/32
+      VpcId: !Ref VPC
