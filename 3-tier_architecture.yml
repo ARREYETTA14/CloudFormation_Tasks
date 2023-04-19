@@ -137,61 +137,6 @@ Parameters:
       - 8080
 
 
-###DatabaseParameters
-  
-##RequiredStorageValue 
-  RequiredStorage:
-    Description: Enter the desired storage size
-    Type: String
-    MinValue: 100
-    MaxValue: 150
-    Default: 100
-
-##RoleAssociation
-  DatabaseRoles:
-    Description: Assign a Role to Your DB
-    FeatureName: String
-    RolesArn: String    
-
-##DatabaseClass
-  DatabaseClass:
-    Description: Input the database class
-    Default: db.m6g
-    AllowedValues:
-      - db.m6g
-      - db.m6gd
-      - db.m6i
-      - db.m5d
-
-##RDSSecurityGroupsForDB
-  RDSSecurityGroups:
-    Type: AWS::RDS::SecurityGroup
-    Properties: 
-      DBSecurityGroupIngress: 
-        CIDRIP: !Ref MySourceIpB
-        EC2SecurityGroupId: !Ref SecurityGroupAppservers 
-      EC2VpcId: !Ref VPC
-      Tags: 
-        - Key: "Name"
-          Value: "Ventura_Database_SG" 
-
-##DBSubnetGroups:
-  DatabaseSubnetGroups:
-    Type: AWS::RDS::DBSubnetGroup
-    Properties:
-      DBSubnetGroupDescription: Enter the SubnetGroups for Multi-AZ Deployment Purpose
-      DBSubnetGroupName: ventura-subnetgroups-for-multiaz-deployment
-      SubnetIds:
-        Type: AWS::RDS::SubnetIds::Name
-      Tags:
-        - Key: Name
-          Value: Ventura_SubnetGroups
-
-##DatabasePassWord
-  DatabasePassword:
-    Type: String
-    Default: //jjtech/database/default/password/
-
 Metadata:
   AWS::Cloudformarion::Interface:
     ParameterGroup:
@@ -221,15 +166,6 @@ Metadata:
         - VolumeTypeAppservers
         - SecurityGroupPortsAppservers
         - MySourceIpA
-      - Label:
-          Default: "Parameters for RDS Database"
-        Parameters:
-        - RequiredStorage
-        - DatabaseRoles
-        - DatabaseClass
-        - RDSSecurityGroups
-        - DatabaseSubnetGroups
-        - DatabasePassword
         
 Resources:
 
@@ -503,27 +439,6 @@ Resources:
           - !Ref SecurityGroupAppservers
 
 
-##DataBases
-  DatabaseEC2:
-    Type: AWS::RDS::DBInstance
-    Properties: 
-      AllocatedStorage: !Ref RequiredStorage
-      AllowMajorVersionUpgrade: Yes
-      AssociatedRoles: !Ref DatabaseRoles
-      DBInstanceClass: !Ref DatabaseClass
-      DBName: Master_Ventura_Database
-      DBSubnetGroupName: !Ref DatabaseSubnetGroups
-      Engine: mysql
-      EngineVersion: MySQL 8.0
-      MasterUserName: MySQL
-      MasterUserPassword: !Ref DatabasePassword
-      MultiAZ: Yes
-      Port: 3306
-      Tags: 
-        - Key: Name
-          Value: Ventura_Database
-      VPCSecurityGroups: !Ref RDSSecurityGroups
-
 Outputs:
   
   Webserver1EC2InstanceId:
@@ -540,15 +455,17 @@ Outputs:
 
   Webserver1EC2PublicIp: 
     Description: Public Ip of the Webservers
-    Value: 
-      - !GetAtt Webserver1EC2.PublicIp
+    Value: !GetAtt 
+      - Webserver1EC2
+      - PublicIp
     Export:
       Name: Webserver1EC2PublicIp
 
   Webserver2EC2PublicIp: 
     Description: Public Ip of the Webservers
-    Value: 
-      - !GetAtt Webserver2EC2.PublicIp
+    Value: !GetAtt 
+      - Webserver2EC2
+      - PublicIp
     Export:
       Name: Webserver2EC2PublicIp    
 
