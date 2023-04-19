@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: A simple EC2 Template
+Description: "A Template with AWS Network Connection"
 
 
 Resources:
