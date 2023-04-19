@@ -2,8 +2,7 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: "A 3-tier Architecture Template"
 
 
-
-Parameter:
+Parameters:
 ### Webserver Parameters
 ##AmazonMachineIDforWebservers:
   AMIIDforWebservers:
@@ -169,7 +168,7 @@ Parameter:
     Type: AWS::RDS::SecurityGroup
     Properties: 
       DBSecurityGroupIngress: 
-        CIDRIP: !Ref MySourceIpC
+        CIDRIP: !Ref MySourceIpB
         EC2SecurityGroupId: !Ref SecurityGroupAppservers 
       EC2VpcId: !Ref VPC
       Tags: 
@@ -377,7 +376,6 @@ Resources:
 
 ##SecurityGroupWebServers
   SecurityGroupWebservers:
-    InstanceSecurityGroups:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Enable SSH via port 22 and from anywhere via port 8080
@@ -392,11 +390,12 @@ Resources:
           - CidrIp: !Ref MySourceIpB
             FromPort: !Ref SecurityGroupPortsWebservers
             IpProtocol: TCP 
-            ToPort: !Ref SecurityGroupPortsWebservers      
+            ToPort: !Ref SecurityGroupPortsWebservers  
+
+
 
 ##SecurityGroupAppServers
   SecurityGroupAppservers:
-    InstanceSecurityGroups:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Enable SSH via port 22 
@@ -504,7 +503,6 @@ Resources:
           - !Ref SecurityGroupAppservers
 
 
-
 ##DataBases
   DatabaseEC2:
     Type: AWS::RDS::DBInstance
@@ -553,3 +551,5 @@ Outputs:
       - !GetAtt Webserver2EC2.PublicIp
     Export:
       Name: Webserver2EC2PublicIp    
+
+
