@@ -1,0 +1,822 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "A 3-tier Architecture Template with Bastion and Loadbalancer"
+
+
+
+Parameters:
+
+##VPCNAME
+  VPCName:
+    Type: String
+    Description: This is the name of the VPC
+
+### Webserver Parameters
+##FrontendLoadBlancer
+  FrontendLBListenerCertificate:
+   Type: String
+   Default: AWS::ElasticLoadBalancingV2::ListenerCertificate::CertificateName
+
+##BackendLoadBlancer
+  BackendLBListenerCertificate:
+   Type: String
+   Default: AWS::ElasticLoadBalancingV2::ListenerCertificate::CertificateName
+
+##AmazonMachineIDforWebservers:
+  AMIIDforWebservers:
+    Type: String
+    Default: ami-0f960c8194f5d8df5
+    Description: Input the AMIID
+
+##InstanceTypeforWebservers:
+  InstanceTypeParameterForWebservers:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t3.large
+      - m1.small
+      - m1.large
+    Description: Enter either t2.micro, t3.large, m1.small or m1.large
+
+##KeyNameforWebservers
+  KeypairforWebservers:
+    Type: String
+    Default: AWS::EC2::KeyPair::KeyName
+    Description: Choose the desired keypair
+
+##DeviceNameWebservers:
+  DevicenameWebservers:
+    Type: String
+    AllowedValues:
+      - /dev/sdh 
+      - xvdh
+
+##VolumeSizeWebservers:
+  VolumeSizeWebservers:
+    Type: Number
+    Default: "10"
+    MinValue: "8"
+    MaxValue: "40"
+
+##VolumeTypeWebservers:
+  VolumeTypeWebservers:
+    Type: String
+    AllowedValues:
+      - gp2
+      - gp3
+
+##SecurityGroupPortsWebservers:
+  SecurityGroupPortsWebserversPrivate:
+    Type: String
+    AllowedValues:
+      - 22
+      - 80
+      - 8080
+
+##SecurityGroupPortsWebservers:
+  SecurityGroupPortsWebservers:
+    Type: String
+    AllowedValues:
+      - 22
+      - 80
+      - 8080
+
+##CIDRBlocks
+  MySourceIpA:
+    Description: Ip address to access the Instance privately
+    Type: String
+    MinLength: "9"
+    MaxLength: "18"
+    Default: 102.244.157.244/32
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+
+
+##CIDRBlocks
+  MySourceIpB:
+    Description: Ip address to access the Instance by anyone
+    Type: String
+    MinLength: "9"
+    MaxLength: "18"
+    Default: 0.0.0.0/0
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+
+
+### Appserver Parameters
+##AmazonMachineIDforAppservers:
+  AMIIDforAppservers:
+    Type: String
+    Default: ami-0022f774911c1d690
+    Description: Input the AMIID
+
+##InstanceTypeforAppservers:
+  InstanceTypeParameterForAppservers:
+    Type: String
+    Default: t3.large
+    AllowedValues:
+      - t3.large
+      - m1.small
+      - m1.large
+    Description: Enter either t3.large, m1.small or m1.large
+
+##KeyNameforAppservers
+  KeypairforAppservers:
+    Type: String
+    Default: AWS::EC2::KeyPair::KeyName
+    Description: Choose the desired keypair
+
+##DeviceNameAppservers:
+  DevicenameAppservers:
+    Type: String
+    AllowedValues:
+      - /dev/sdh 
+      - xvdh   
+
+##VolumeSizeAppservers:
+  VolumeSizeAppservers:
+    Type: Number
+    Default: "10"
+    MinValue: "8"
+    MaxValue: "40"       
+
+##VolumeTypeAppservers:
+  VolumeTypeAppservers:
+    Type: String
+    AllowedValues:
+      - gp2
+      - gp3
+
+##SecurityGroupPortsAppservers:
+  SecurityGroupPortsAppservers:
+    Type: String
+    AllowedValues:
+      - 22
+      - 80
+      - 8080
+
+
+###BastionHost
+##SecurityGroupPort
+  SecurityGroupPortBastionHost:
+    Type: String
+    Default: "22"
+
+##VolumeBastionHost:
+  VolumeSizeBastionHost:
+    Type: Number
+    Default: "10"
+       
+##VolumeTypeBastionHost:
+  VolumeTypeBastionHost:
+    Type: String
+    Default: gp2
+
+
+
+###DatabaseParameters
+##RequiredStorageValue 
+  RequiredStorage:
+    Description: Enter the desired storage size
+    Type: Number
+    MinValue: "100"
+    MaxValue: "150"
+    Default: "100"
+
+##RoleAssociationFeatureName
+  FeatureNameDB:
+    Description: Assign Role Name
+    Type: String
+    Default: s3Import
+
+##RoleAssociationRoleName
+  RoleArnDB:
+    Description: Assign Role ARN   
+    Type: String
+    Default: AWS::EC2::RoleArn::ArnName
+
+##DatabaseClass
+  DatabaseClass:
+    Description: Input the database class
+    Type: AWS::RDS::DBInstance
+    Default: db.m6g
+    AllowedValues:
+      - db.m6g
+      - db.m6gd
+      - db.m6i
+      - db.m5d
+
+
+##DatabasePassWord
+  DatabasePassword:
+    Type: String
+    Default: //jjtech/database/default/password/
+
+Metadata:
+  AWS::Cloudformarion::Interface:
+    ParameterGroup:
+      - 
+        Label:
+          Default: "Parameters for Webservers"
+        Parameters:
+        - AMIIDforWebservers
+        - InstanceTypeParameterForWebservers
+        - KeypairforWebservers
+        - DevicenameWebservers
+        - VolumeSizeWebservers
+        - VolumeTypeWebservers
+        - SecurityGroupPortsWebserversPrivate
+        - MySourceIpA
+        - SecurityGroupPortsWebservers
+        - MySourceIpB
+      - 
+        Label:
+          Default: "Parameters for Appservers"
+        Parameters:
+        - AMIIDforAppservers
+        - InstanceTypeParameterForAppservers
+        - KeypairforAppservers
+        - DevicenameAppservers
+        - VolumeSizeAppservers
+        - VolumeTypeAppservers
+        - SecurityGroupPortsAppservers
+        - MySourceIpA
+      - Label:
+          Default: "Parameters for RDS Database"
+        Parameters:
+        - RequiredStorage
+        - DatabaseRoles
+        - DatabaseClass
+        - RDSSecurityGroups
+        - DatabaseSubnetGroups
+        - DatabasePassword
+        
+Resources:
+
+##VirtualPrivateCloud
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Ref VPCName
+
+##InternetGateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+
+##VPCGateWayAttachment
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+
+##FrontEndLoadbalancerSecurityGroup
+  FrontendLoadBalancerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Accepts traffic from the internet and distributes to webservers
+      GroupName: Frontend_LoadBalancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+
+          - CidrIp: !Ref MySourceIpB
+            FromPort: !Ref SecurityGroupPortsWebservers
+            IpProtocol: TCP 
+            ToPort: !Ref SecurityGroupPortsWebservers
+
+##BackendLoadbalancerSecurityGroup
+  BackendLoadBalancerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Accepts traffic from the webservers and distributes to appservers
+      GroupName: Backend_LoadBalancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+
+        - SourceSecurityGroupId: ! GetAtt [SecurityGroupWebservers, SecurityGroupId]
+
+
+##FrontendLoadBalancer:
+  FrontendLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      Scheme: internal-facing
+      SecurityGroups: !Ref FrontendLoadBalancerSG
+      Subnets:
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+
+##FrontendLoadBalancerListener:
+  FrontendLoadbalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions: 
+        - Type: "redirect"
+          RedirectConfig:
+            Protocol: "HTTP"
+            Port: 80
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: "HTTPS_301"
+      LoadBalancerArn: !Ref FrontendLoadBalancer
+      Port: 443
+      Protocol: "HTTPS"
+
+##LoadBalancerCertificate
+  LoadBalancerListernerCertificate:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Properties:
+      Certificates: 
+        - !Ref FrontendLBListenerCertificate
+      ListenerArn: !Ref FrontendLoadbalancerListener
+
+##LBTargetGroup
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      Name: Webservers
+      Protocol: HTTPS
+      TargetType: instance
+      Targets: 
+        - Id: ! GetAtt [Webserver1EC2, instanceId]
+        - Id: ! GetAtt [Webserver2EC2, instanceId] 
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} FrontendTargetGroup
+      VpcId: !Ref VPC
+
+ 
+ ##BackendendLoadBalancer:
+  BackendLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      Scheme: internal
+      SecurityGroups: !Ref BackendLoadBalancerSG
+      Subnets:
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB
+
+##BackendLoadBalancerListener:
+  BackendLoadbalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions: 
+        - Type: "redirect"
+          RedirectConfig:
+            Protocol: "HTTPS"
+            Port: 443
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: "HTTP_301"
+      LoadBalancerArn: !Ref BackendLoadBalancer
+      Port: 80
+      Protocol: "HTTP"
+
+##BackendLoadBalancerCertificate
+  BackendLoadBalancerListernerCertificate:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Properties:
+      Certificates: 
+        - !Ref BackendLBListenerCertificate
+      ListenerArn: !Ref BackendLoadbalancerListener
+
+##BackendLBTargetGroup
+  BackendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      Name: Appservers
+      Protocol: HTTPS
+      TargetType: instance
+      Targets: 
+        - Id: ! GetAtt [AppServer1EC2, instanceId]
+        - Id: ! GetAtt [AppServer2EC2, instanceId] 
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} BackendTargetGroup
+      VpcId: !Ref VPC
+
+
+##Subnet_Public_1
+  PublicSubnetA: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: ! Select [0, !GetAZs '']
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PublicsubnetA
+
+##Subnet_Public_2
+  PublicSubnetB: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: ! Select [1, !GetAZs '']
+      CidrBlock: 10.1.0.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PublicsubnetB
+
+##RoutetablePublic
+  RouteTablePublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PublicRT
+
+##InternetRoute
+  InternetRoute: 
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref RouteTablePublic
+
+##PublicSubnetARouteTableAssociation
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePublic
+      SubnetId: !Ref PublicSubnetA
+
+##PublicSubnetBRouteTableAssociation
+  PublicSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePublic
+      SubnetId: !Ref PublicSubnetB
+
+##Subnet_Private_1
+  PrivateSubnetA: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: ! Select [0, !GetAZs '']
+      CidrBlock: 10.2.0.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PrivateSubnetA 
+
+##Subnet_Private_2
+  PrivateSubnetB: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: ! Select [1, !GetAZs '']
+      CidrBlock: 10.3.0.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PrivateSubnetB
+
+##RoutetablePrivate
+  RouteTablePrivate:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PrivateRT
+
+##LocalRoute
+  LocalRoute: 
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 172.31.0.0/16
+      RouteTableId: !Ref RouteTablePrivate
+
+##PrivateSubnetARouteTableAssociation
+  PrivateSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate
+      SubnetId: !Ref PrivateSubnetA
+
+##PrivateSubnetBRouteTableAssociation
+  PrivateSubnetDRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate
+      SubnetId: !Ref PrivateSubnetB
+
+
+##NetworkAccessControlLists(NACLs)
+  NACLs:
+    Type: AWS::EC2::NetworkAcl
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: Security_for_Test_VPC
+      VpcId: !Ref VPC
+
+##ElasticIpPublicSubnet_1
+  ElasticIpPublicSubnetOne:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Tags:
+        - Key: Name
+          Value: EIp_Public_Subnet_1
+
+##ElasticIpPublicSubnet_2
+  ElasticIpPublicSubnetTwo:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Tags:
+        - Key: Name
+          Value: EIp_Public_Subnet_2
+
+##NATgatewayPublicSubnetA
+  NATgatewayPublicSubnetA:
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt ElasticIpPublicSubnetOne.AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags: 
+        - Key: Name
+          Value: PublicSubnetA
+
+##PrivateRouteNATGW_1
+  PrivateSN1NATGWRoute:
+    Type: AWS::EC2::EIP
+    Properties:
+        RouteTableId: !Ref RouteTablePrivate
+        DestinationCidrBlock: '0.0.0.0/0'
+        NatGatewayId: !Ref NATgatewayPublicSubnetA
+
+##NATgatewayPublicSubnetB
+  NATgatewayPublicSubnetB:
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt ElasticIpPublicSubnetTwo.AllocationId
+      SubnetId: !Ref PublicSubnetB
+      Tags: 
+        - Key: Name
+          Value: PublicSubnetB
+
+##PrivateRouteNATGW_2
+  PrivateSN2NATGWRoute:
+    Type: AWS::EC2::EIP
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NATgatewayPublicSubnetB
+
+
+##SecurityGroupBastionHost
+  BastionHostSecurityGroups:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH via port 22 
+      GroupName: Bastion_Host_EC2_SG
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+          - CidrIp: !Ref MySourceIpA
+            FromPort: !Ref SecurityGroupPortBastionHost
+            IpProtocol: TCP 
+            ToPort: !Ref SecurityGroupPortBastionHost          
+
+
+##SecurityGroupWebServers
+  SecurityGroupWebservers:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH via port 22 and from anywhere via port 8080
+      GroupName: Wedservers_EC2_SG
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+
+          - CidrIp: !Ref MySourceIpB
+            FromPort: !Ref SecurityGroupPortsWebservers
+            IpProtocol: TCP 
+            ToPort: !Ref SecurityGroupPortsWebservers 
+
+          - CidrIp: !Ref MySourceIpA
+            FromPort: !Ref SecurityGroupPortsWebserversPrivate
+            IpProtocol: TCP 
+            ToPort: !Ref SecurityGroupPortsWebserversPrivate
+            SourceSecurityGroupId: !Ref BastionHostSecurityGroups
+            
+
+##SecurityGroupAppServers
+  SecurityGroupAppservers:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH via port 22 
+      GroupName: Wedservers_EC2_SG
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+
+          - CidrIp: !Ref MySourceIpA
+            FromPort: !Ref SecurityGroupPortsWebserversPrivate
+            IpProtocol: TCP 
+            ToPort: !Ref SecurityGroupPortsWebserversPrivate
+            SourceSecurityGroupId: !Ref BastionHostSecurityGroups
+
+
+##Webserver1:
+  Webserver1EC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMIIDforWebservers
+      InstanceType: !Ref InstanceTypeParameterForWebservers
+      KeyName: !Ref KeypairforWebservers
+      Tags:
+        - Key: Name
+          Value: Webserver1
+        - Key: Production
+          Value: Webserver1  
+      SubnetId: !Ref PublicSubnetA
+      BlockDeviceMappings:
+          -
+            DeviceName: !Ref DevicenameWebservers
+            Ebs: 
+              DeleteOnTermination: True
+              VolumeSize: !Ref VolumeSizeWebservers
+              VolumeType: !Ref VolumeTypeWebservers
+      SecurityGroupIds:
+          - !Ref SecurityGroupWebservers
+
+
+##Webserver2:   
+  Webserver2EC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMIIDforWebservers
+      InstanceType: !Ref InstanceTypeParameterForWebservers
+      KeyName: !Ref KeypairforWebservers
+      Tags:
+        - Key: Name
+          Value: Webserver1
+        - Key: Production
+          Value: Webserver1  
+      SubnetId: !Ref PublicSubnetB
+      BlockDeviceMappings:
+          -
+            DeviceName: !Ref DevicenameWebservers
+            Ebs: 
+              DeleteOnTermination: True
+              VolumeSize: !Ref VolumeSizeWebservers
+              VolumeType: !Ref VolumeTypeWebservers
+      SecurityGroupIds:
+          - !Ref SecurityGroupWebservers 
+
+##Appserver1:
+  AppServer1EC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMIIDforAppservers
+      InstanceType: !Ref InstanceTypeParameterForAppservers
+      KeyName: !Ref KeypairforAppservers
+      Tags:
+        - Key: Name
+          Value: Appserver1
+        - Key: Production
+          Value: Appserver1  
+      SubnetId: !Ref PrivateSubnetA
+      BlockDeviceMappings:
+          -
+            DeviceName: !Ref DevicenameAppservers
+            Ebs: 
+              DeleteOnTermination: True
+              VolumeSize: !Ref VolumeSizeAppservers
+              VolumeType: !Ref VolumeTypeAppservers
+      SecurityGroupIds:
+          - !Ref SecurityGroupAppservers
+
+##Appserver2:
+  AppServer2EC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMIIDforAppservers
+      InstanceType: !Ref InstanceTypeParameterForAppservers
+      KeyName: !Ref KeypairforAppservers
+      Tags:
+        - Key: Name
+          Value: Appserver2
+        - Key: Production
+          Value: Appserver2  
+      SubnetId: !Ref PrivateSubnetB
+      BlockDeviceMappings:
+          -
+            DeviceName: !Ref DevicenameAppservers
+            Ebs: 
+              DeleteOnTermination: True
+              VolumeSize: !Ref VolumeSizeAppservers
+              VolumeType: !Ref VolumeTypeAppservers
+      SecurityGroupIds:
+          - !Ref SecurityGroupAppservers
+
+##BastionHostServer:
+  BastionHostEC2Server:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMIIDforAppservers
+      InstanceType: !Ref InstanceTypeParameterForAppservers
+      KeyName: !Ref KeypairforAppservers
+      Tags:
+        - Key: Name
+          Value: Bastion_Host
+        - Key: DevOps
+          Value: Team 
+      SubnetId: !Ref PrivateSubnetA
+      BlockDeviceMappings:
+          -
+            DeviceName: !Ref DevicenameAppservers
+            Ebs: 
+              DeleteOnTermination: True
+              VolumeSize: !Ref VolumeSizeBastionHost
+              VolumeType: !Ref VolumeTypeBastionHost
+      SecurityGroupIds:
+          - !Ref BastionHostSecurityGroups
+
+##RDSSecurityGroupsForDB
+  RDSSecurityGroups:
+    Type: AWS::RDS::DBSecurityGroup
+    Properties: 
+      DBSecurityGroupIngress: 
+        - CIDRIP: !Ref MySourceIpB
+        - EC2SecurityGroupId: !Ref SecurityGroupAppservers 
+      EC2VpcId: !Ref VPC
+      Tags: 
+        - Key: "Name"
+          Value: "Ventura_Database_SG" 
+
+##DBSubnetGroups:
+  DatabaseSubnetGroups:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Enter the SubnetGroups for Multi-AZ Deployment Purpose
+      DBSubnetGroupName: ventura-subnetgroups-for-multiaz-deployment
+      SubnetIds:
+        Type: AWS::RDS::SubnetIds::Name
+      Tags:
+        - Key: Name
+          Value: Ventura_SubnetGroups
+
+##DataBasesInstance
+  DatabaseEC2:
+    Type: AWS::RDS::DBInstance
+    Properties: 
+      AllocatedStorage: !Ref RequiredStorage
+      AllowMajorVersionUpgrade: Yes
+      AssociatedRoles:
+        - FeatureName: !Ref FeatureNameDB
+          RoleArn:  !Ref RoleArnDB
+      DBInstanceClass: !Ref DatabaseClass
+      DBName: Master_Ventura_Database
+      DBSubnetGroupName: !Ref DatabaseSubnetGroups
+      Engine: mysql
+      EngineVersion: MySQL 8.0
+      MasterUserName: MySQL
+      MasterUserPassword: !Ref DatabasePassword
+      MultiAZ: Yes
+      Port: 3306
+      Tags: 
+        - Key: Name
+          Value: Ventura_Database
+      VPCSecurityGroups: !Ref RDSSecurityGroups
+
+Outputs:
+  
+  Webserver1EC2InstanceId:
+    Description: My Wedserver1 EC2 Instance Id
+    Value: !Ref Webserver1EC2
+    Export: 
+      Name: MyWebserver1InstanceId
+  
+  Webserver2Ec2InstanceId:
+    Description: My Webserver2 EC2 Instance Id
+    Value: !Ref Webserver2EC2
+    Export: 
+      Name: MyWebserver2InstanceId
+
+  Webserver1EC2PublicIp: 
+    Description: Public Ip of the Webservers
+    Value: !GetAtt 
+      - Webserver1EC2
+      - PublicIp
+    Export:
+      Name: Webserver1EC2PublicIp
+
+  Webserver2EC2PublicIp: 
+    Description: Public Ip of the Webservers
+    Value: !GetAtt 
+      - Webserver2EC2
+      - PublicIp
+    Export:
+      Name: Webserver2EC2PublicIp    
+
+
