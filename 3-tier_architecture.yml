@@ -3,6 +3,12 @@ Description: "A 3-tier Architecture Template"
 
 
 Parameters:
+
+##VPCNAME
+  VPCName:
+    Type: String
+    Description: This is the name of the VPC
+
 ### Webserver Parameters
 ##AmazonMachineIDforWebservers:
   AMIIDforWebservers:
@@ -175,8 +181,8 @@ Resources:
       Properties:
         CidrBlock: 10.0.0.0/16
         Tags:
-          - Key: "Name"
-            Value: "Test_VPC"
+          - Key: Name
+            Value: !Ref VPCName
 
 ##InternetGateway
   InternetGateway:
@@ -195,24 +201,33 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: eu-north-1a
+      AvailabilityZone: ! Select [0, !GetAZs '']
       CidrBlock: 10.0.0.0/24
       MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PublicsubnetA
 
 ##Subnet_Public_2
   PublicSubnetB: 
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: eu-north-1b
+      AvailabilityZone: ! Select [1, !GetAZs '']
       CidrBlock: 10.1.0.0/24
       MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PublicsubnetB
 
 ##RoutetablePublic
   RouteTablePublic:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PublicRT
 
 ##InternetRoute
   InternetRoute: 
@@ -241,24 +256,33 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: eu-north-1a
+      AvailabilityZone: ! Select [0, !GetAZs '']
       CidrBlock: 10.2.0.0/24
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PrivateSubnetA
 
 ##Subnet_Private_2
   PrivateSubnetB: 
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: eu-north-1b
+      AvailabilityZone: ! Select [1, !GetAZs '']
       CidrBlock: 10.3.0.0/24
       MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PrivateSubnetB
 
 ##RoutetablePrivate
   RouteTablePrivate:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PrivateRT
 
 ##LocalRoute
   LocalRoute: 
@@ -291,24 +315,58 @@ Resources:
           Value: Security_for_Test_VPC
       VpcId: !Ref VPC
 
+##ElasticIpPublicSubnet_1
+  ElasticIpPublicSubnetOne:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Tags:
+        - Key: Name
+          Value: NATgatewayPublicSubnetA_EIp
+
 ##NATgatewayPublicSubnetA
-  NATgatewaPublicSubnetA:
+  NATgatewayPublicSubnetA:
     Type: AWS::EC2::NatGateway
     Properties: 
+      AllocationId: !GetAtt ElasticIpPublicSubnetOne.AllocationId
       SubnetId: !Ref PublicSubnetA
       Tags: 
         - Key: Name
           Value: PublicSubnetA
 
+##PrivateRouteNATGW_1
+  PrivateSN1NATGWRoute:
+    Type: AWS::EC2::EIP
+    Properties:
+        RouteTableId: !Ref RouteTablePrivate
+        DestinationCidrBlock: '0.0.0.0/0'
+        NatGatewayId: !Ref NATgatewayPublicSubnetA
+
+##ElasticIpPublicSubnet_2
+  ElasticIpPublicSubnetTwo:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Tags:
+        - Key: Name
+          Value: NATgatewayPublicSubnetB_EIp
+
+
 ##NATgatewayPublicSubnetB
-  NATgatewaPublicSubnetB:
+  NATgatewayPublicSubnetB:
     Type: AWS::EC2::NatGateway
     Properties: 
+      AllocationId: !GetAtt ElasticIpPublicSubnetTwo.AllocationId
       SubnetId: !Ref PublicSubnetB
       Tags: 
         - Key: Name
           Value: PublicSubnetB
 
+##PrivateRouteNATGW_1
+  PrivateSN2NATGWRoute:
+    Type: AWS::EC2::EIP
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NATgatewayPublicSubnetB
 
 ##SecurityGroupWebServers
   SecurityGroupWebservers:
