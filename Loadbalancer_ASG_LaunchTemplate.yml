@@ -1,0 +1,577 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "A template with LoadBalancer and Autoscaling group Launch Templates"
+
+Parameters:
+##FrontendLoadBlancer
+  FrontendLBListenerCertificate:
+   Type: String
+   Default: AWS::ElasticLoadBalancingV2::ListenerCertificate::CertificateName
+
+##BackendLoadBlancer
+  BackendLBListenerCertificate:
+   Type: String
+   Default: AWS::ElasticLoadBalancingV2::ListenerCertificate::CertificateName
+
+##VPCNAME
+  VPCName:
+    Type: String
+    Description: This is the name of the VPC
+
+##AmazonMachineIDforWebservers:
+  AMIIDforWebservers:
+    Type: String
+    Default: ami-0f960c8194f5d8df5
+    Description: Input the AMIID
+
+##InstanceTypeforWebservers:
+  InstanceTypeParameterForWebservers:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t3.large
+      - m1.small
+      - m1.large
+    Description: Enter either t2.micro, t3.large, m1.small or m1.large
+
+##KeyNameforWebservers
+  KeypairforWebservers:
+    Type: String
+    Default: AWS::EC2::KeyPair::KeyName
+    Description: Choose the desired keypair
+
+##VolumeSizeWebservers:
+  VolumeSizeWebservers:
+    Type: Number
+    Default: "10"
+    MinValue: "8"
+    MaxValue: "40"
+
+##VolumeTypeWebservers:
+  VolumeTypeWebservers:
+    Type: String
+    AllowedValues:
+      - gp2
+      - gp3
+
+##CIDRBlocks
+  MySourceIpA:
+    Description: Ip address to access the Instance privately
+    Type: String
+    MinLength: "9"
+    MaxLength: "18"
+    Default: 102.244.157.244/32
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+
+
+##CIDRBlocks
+  MySourceIpB:
+    Description: Ip address to access the Instance by anyone
+    Type: String
+    MinLength: "9"
+    MaxLength: "18"
+    Default: 0.0.0.0/0
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+
+##SecurityGroupPortsWebservers:
+  SecurityGroupPortsWebserversPrivate:
+    Type: String
+    AllowedValues:
+      - 22
+      - 80
+      - 8080
+
+##SecurityGroupPortsWebservers:
+  SecurityGroupPortsWebservers:
+    Type: String
+    AllowedValues:
+      - 22
+      - 80
+      - 8080
+
+##Subnets
+  Subnets:
+    Type: 'List<AWS::EC2::Subnet::Id>'
+    Description: A list of Subnets for the Auto Scaling Group
+
+##AmazonMachineIDforAppservers:
+  AMIIDforAppservers:
+    Type: String
+    Default: ami-0022f774911c1d690
+    Description: Input the AMIID
+
+##InstanceTypeforAppservers:
+  InstanceTypeParameterForAppservers:
+    Type: String
+    Default: t3.large
+    AllowedValues:
+      - t3.large
+      - m1.small
+      - m1.large
+    Description: Enter either t3.large, m1.small or m1.large
+
+##KeyNameforAppservers
+  KeypairforAppservers:
+    Type: String
+    Default: AWS::EC2::KeyPair::KeyName
+    Description: Choose the desired keypair
+
+##DeviceNameAppservers:
+  DevicenameAppservers:
+    Type: String
+    AllowedValues:
+      - /dev/sdh 
+      - xvdh   
+
+##VolumeSizeAppservers:
+  VolumeSizeAppservers:
+    Type: Number
+    Default: "10"
+    MinValue: "8"
+    MaxValue: "40"       
+
+##VolumeTypeAppservers:
+  VolumeTypeAppservers:
+    Type: String
+    AllowedValues:
+      - gp2
+      - gp3
+
+
+Resources:
+
+##VirtualPrivateCloud
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      Tags:
+        - Key: Name
+          Value: !Ref VPCName
+
+##InternetGateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+
+##VPCGateWayAttachment
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+##Subnet_Public_1
+  PublicSubnetA: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: ! Select [0, !GetAZs '']
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PublicsubnetA
+
+##Subnet_Public_2
+  PublicSubnetB: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: ! Select [1, !GetAZs '']
+      CidrBlock: 10.1.0.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PublicsubnetB
+
+##RoutetablePublic
+  RouteTablePublic:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PublicRT
+
+##InternetRoute
+  InternetRoute: 
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref RouteTablePublic
+
+##PublicSubnetARouteTableAssociation
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePublic
+      SubnetId: !Ref PublicSubnetA
+
+##PublicSubnetBRouteTableAssociation
+  PublicSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePublic
+      SubnetId: !Ref PublicSubnetB
+
+##Subnet_Private_1
+  PrivateSubnetA: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: ! Select [0, !GetAZs '']
+      CidrBlock: 10.2.0.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PrivateSubnetA 
+
+##Subnet_Private_2
+  PrivateSubnetB: 
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: ! Select [1, !GetAZs '']
+      CidrBlock: 10.3.0.0/24
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PrivateSubnetB
+
+##RoutetablePrivate
+  RouteTablePrivate:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} PrivateRT
+
+##LocalRoute
+  LocalRoute: 
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 172.31.0.0/16
+      RouteTableId: !Ref RouteTablePrivate
+
+##PrivateSubnetARouteTableAssociation
+  PrivateSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate
+      SubnetId: !Ref PrivateSubnetA
+
+##PrivateSubnetBRouteTableAssociation
+  PrivateSubnetDRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate
+      SubnetId: !Ref PrivateSubnetB
+
+
+##NetworkAccessControlLists(NACLs)
+  NACLs:
+    Type: AWS::EC2::NetworkAcl
+    Properties: 
+      Tags: 
+        - Key: Name
+          Value: Security_for_Test_VPC
+      VpcId: !Ref VPC
+
+##ElasticIpPublicSubnet_1
+  ElasticIpPublicSubnetOne:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Tags:
+        - Key: Name
+          Value: EIp_Public_Subnet_1
+
+##ElasticIpPublicSubnet_2
+  ElasticIpPublicSubnetTwo:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Tags:
+        - Key: Name
+          Value: EIp_Public_Subnet_2
+
+##NATgatewayPublicSubnetA
+  NATgatewayPublicSubnetA:
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt ElasticIpPublicSubnetOne.AllocationId
+      SubnetId: !Ref PublicSubnetA
+      Tags: 
+        - Key: Name
+          Value: PublicSubnetA
+
+##PrivateRouteNATGW_1
+  PrivateSN1NATGWRoute:
+    Type: AWS::EC2::EIP
+    Properties:
+        RouteTableId: !Ref RouteTablePrivate
+        DestinationCidrBlock: '0.0.0.0/0'
+        NatGatewayId: !Ref NATgatewayPublicSubnetA
+
+##NATgatewayPublicSubnetB
+  NATgatewayPublicSubnetB:
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId: !GetAtt ElasticIpPublicSubnetTwo.AllocationId
+      SubnetId: !Ref PublicSubnetB
+      Tags: 
+        - Key: Name
+          Value: PublicSubnetB
+
+##PrivateRouteNATGW_2
+  PrivateSN2NATGWRoute:
+    Type: AWS::EC2::EIP
+    Properties:
+      RouteTableId: !Ref RouteTablePrivate
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NATgatewayPublicSubnetB
+
+##SecurityGroupWebServers
+  SecurityGroupWebservers:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH via port 22 and from anywhere via port 8080
+      GroupName: Wedservers_EC2_SG
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+
+          - CidrIp: !Ref MySourceIpB
+            FromPort: !Ref SecurityGroupPortsWebservers
+            IpProtocol: TCP 
+            ToPort: !Ref SecurityGroupPortsWebservers 
+
+          - CidrIp: !Ref MySourceIpA
+            FromPort: !Ref SecurityGroupPortsWebserversPrivate
+            IpProtocol: TCP 
+            ToPort: !Ref SecurityGroupPortsWebserversPrivate
+            
+       
+##SecurityGroupAppServers
+  SecurityGroupAppservers:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH via port 22 
+      GroupName: Wedservers_EC2_SG
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+
+          - CidrIp: !Ref MySourceIpA
+            FromPort: !Ref SecurityGroupPortsWebserversPrivate
+            IpProtocol: TCP 
+            ToPort: !Ref SecurityGroupPortsWebserversPrivate
+            
+
+##Webservers launch template
+  WebserversLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Ref AMIIDforWebservers
+        InstanceType: !Ref InstanceTypeParameterForWebservers
+        KeyName: !Ref KeypairforWebservers
+        Tags:
+          - Key: Name
+            Value: Webserver
+          - Key: Environment
+            Value: Production
+        BlockDeviceMappings:
+            -
+              DeviceName: xvdh
+              Ebs: 
+                DeleteOnTermination: True
+                VolumeSize: 8
+                VolumeType: gp2
+        SecurityGroupIds:
+              - !Ref SecurityGroupWebservers     
+      LaunchTemplateName: Webserver_LT   
+
+##Appservers launch template
+  AppserversLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateData:
+        ImageId: !Ref AMIIDforAppservers
+        InstanceType: !Ref InstanceTypeParameterForAppservers
+        KeyName: !Ref KeypairforAppservers
+        Tags:
+          - Key: Name
+            Value: Webserver
+          - Key: Environment
+            Value: Production
+        BlockDeviceMappings:
+            -
+              DeviceName: !Ref DevicenameAppservers
+              Ebs: 
+                DeleteOnTermination: True
+                VolumeSize: !Ref VolumeSizeAppservers
+                VolumeType: !Ref VolumeTypeAppservers
+        SecurityGroupIds:
+              - !Ref SecurityGroupAppservers   
+      LaunchTemplateName: Webserver_LT
+
+##Webservers_AutoScaling_Group
+  WebserversASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref WebserversLaunchTemplate
+        Version: ! GetAtt [WebserversLaunchTemplate, LatestVersionNumber]     
+      AutoScalingGroupName: Webservers_ASG
+      AvailabilityZones: 
+        - ! Select [0, !GetAZs '']
+      DesiredCapacity: "1"
+      MaxSize: "2"
+      MinSize:  "1"
+      VPCZoneIdentifier: !Ref Subnets
+      TargetGroupARNs: ! GetAtt [FrontendTargetGroup, TargetGroupARN]
+
+
+##Appservers_AutoScaling_Group
+  AppserversASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties: 
+      LaunchTemplate:
+        LaunchTemplateId: !Ref AppserversLaunchTemplate
+        Version: ! GetAtt [AppserversLaunchTemplate, LatestVersionNumber]
+      AutoScalingGroupName: Appservers_ASG
+      AvailabilityZones: 
+        - ! Select [0, !GetAZs '']
+      DesiredCapacity: "1"
+      MaxSize: "2"
+      MinSize:  "1"
+      VPCZoneIdentifier: !Ref Subnets
+      TargetGroupARNs: ! GetAtt [BackendTargetGroup, TargetGroupARN]
+
+
+##FrontendLoadBalancer:
+  FrontendLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      Scheme: internal-facing
+      SecurityGroups: !Ref FrontendLoadBalancerSG
+      Subnets:
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+
+##FrontendLoadBalancerListener:
+  FrontendLoadbalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions: 
+        - Type: "redirect"
+          RedirectConfig:
+            Protocol: "HTTP"
+            Port: 80
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: "HTTPS_301"
+      LoadBalancerArn: !Ref FrontendLoadBalancer
+      Port: 443
+      Protocol: "HTTPS"
+
+##LoadBalancerCertificate
+  LoadBalancerListernerCertificate:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Properties:
+      Certificates: 
+        - !Ref FrontendLBListenerCertificate
+      ListenerArn: !Ref FrontendLoadbalancerListener
+
+##LBTargetGroup
+  FrontendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      Name: Webservers
+      Protocol: HTTPS
+      TargetType: instance
+      Targets: 
+        - Id: ! GetAtt [Webserver1EC2, instanceId]
+        - Id: ! GetAtt [Webserver2EC2, instanceId] 
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} FrontendTargetGroup
+      VpcId: !Ref VPC
+
+##BackendendLoadBalancer:
+  BackendLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties: 
+      Scheme: internal
+      SecurityGroups: !Ref BackendLoadBalancerSG
+      Subnets:
+        - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB
+
+##BackendLoadBalancerListener:
+  BackendLoadbalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions: 
+        - Type: "redirect"
+          RedirectConfig:
+            Protocol: "HTTPS"
+            Port: 443
+            Host: "#{host}"
+            Path: "/#{path}"
+            Query: "#{query}"
+            StatusCode: "HTTP_301"
+      LoadBalancerArn: !Ref BackendLoadBalancer
+      Port: 80
+      Protocol: "HTTP"
+
+##BackendLoadBalancerCertificate
+  BackendLoadBalancerListernerCertificate:
+    Type: AWS::ElasticLoadBalancingV2::ListenerCertificate
+    Properties:
+      Certificates: 
+        - !Ref BackendLBListenerCertificate
+      ListenerArn: !Ref BackendLoadbalancerListener
+
+##BackendLBTargetGroup
+  BackendTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      Name: Appservers
+      Protocol: HTTPS
+      TargetType: instance
+      Targets: 
+        - Id: ! GetAtt [AppServer1EC2, instanceId]
+        - Id: ! GetAtt [AppServer2EC2, instanceId] 
+      Tags:
+        - Key: Name
+          Value: !Sub $ {!Ref VPCName} BackendTargetGroup
+      VpcId: !Ref VPC
+
+##FrontEndLoadbalancerSecurityGroup
+  FrontendLoadBalancerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Accepts traffic from the internet and distributes to webservers
+      GroupName: Frontend_LoadBalancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+
+          - CidrIp: !Ref MySourceIpB
+            FromPort: !Ref SecurityGroupPortsWebservers
+            IpProtocol: TCP 
+            ToPort: !Ref SecurityGroupPortsWebservers
+
+##BackendLoadbalancerSecurityGroup
+  BackendLoadBalancerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Accepts traffic from the webservers and distributes to appservers
+      GroupName: Backend_LoadBalancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - SourceSecurityGroupId: ! GetAtt [SecurityGroupWebservers, SecurityGroupId]
+
